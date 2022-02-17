@@ -1,6 +1,7 @@
 """Command line interface for looking up callsigns."""
 
 from bs4 import BeautifulSoup as Soup
+import re
 import requests
 import time
 from getpass import getpass
@@ -11,13 +12,15 @@ def main():
     print("[Creating a session...]\n")
 
     radio = RadioCommandSession()
-    email: str = input("Enter QRZ.com email: ")
+    email: str = input("Enter QRZ.com email or callsign: ")
     password: str = getpass("Enter QRZ.com password: ")
     try:
         radio.loginQrz(email, password)
     except Exception as e:
         print(f"Error: Could not login. {e}")
+        main()
     time.sleep(2)
+    print("[Authentication successful]")
     try:
         while True:
             callsign = input("[Enter callsign]: ")
@@ -30,6 +33,7 @@ def main():
             print(f"PIC LINK: {ham['profile_pic']}")
             print()
     except KeyboardInterrupt:
+        print("[Session ending...]")
         print("[Logging out]")
 
 
@@ -76,13 +80,14 @@ class RadioCommandSession:
             pass
 
         try:
-            pic = soup.find(id="mypic")
-        except AttributeError:
+            picTag = soup.find(id="mypic")
+            if picTag and "static/qrz/qrz_com200x150.jpg" in picTag:  # Default profile picture
+                pic = None
+            else:
+                pic = re.search("src=\"(http.*)/>", picTag)
+        except Exception:
             pic = None
             pass
-
-        if "static/qrz/qrz_com200x150.jpg" in pic:  # Default profile picture
-            pic = None
 
         return {
             "name": name,
